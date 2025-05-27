@@ -158,47 +158,25 @@
   <input id="pname" placeholder="Product Name" />
   <input id="price" placeholder="Price (e.g. 199)" />
   <input id="phone" placeholder="WhatsApp Number (e.g. 9876543210)" />
-  <input type="file" id="imgFile" accept="image/*" />
+  <input id="imgUrl" placeholder="Image URL (e.g. https://example.com/image.jpg)" />
   <button onclick="saveProduct()" id="submitBtn">Add Product</button>
 </div>
 
 <div id="productList"></div>
 
-<!-- Firebase scripts -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-storage.js";
-
-  const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_AUTH_DOMAIN",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const storage = getStorage(app);
-
+<script>
   let editIndex = -1;
 
-  async function saveProduct() {
+  function saveProduct() {
     const name = document.getElementById("pname").value.trim();
     const price = document.getElementById("price").value.trim();
     const phone = document.getElementById("phone").value.trim();
-    const fileInput = document.getElementById("imgFile");
-    const file = fileInput.files[0];
+    const imgUrl = document.getElementById("imgUrl").value.trim();
 
-    if (!name || !price || !phone || !file) {
-      alert("❗ Please fill all fields and select an image.");
+    if (!name || !price || !phone || !imgUrl) {
+      alert("❗ Please fill all fields including image URL.");
       return;
     }
-
-    // Upload image
-    const storageRef = ref(storage, 'products/' + file.name);
-    await uploadBytes(storageRef, file);
-    const imgUrl = await getDownloadURL(storageRef);
 
     const products = JSON.parse(localStorage.getItem("products") || "[]");
     const newProduct = { name, price, phone, img: imgUrl };
@@ -218,7 +196,6 @@
 
   function clearForm() {
     document.querySelectorAll(".form input").forEach(input => input.value = "");
-    document.getElementById("imgFile").value = "";
   }
 
   function showProducts() {
@@ -251,6 +228,7 @@
     document.getElementById("pname").value = p.name;
     document.getElementById("price").value = p.price;
     document.getElementById("phone").value = p.phone;
+    document.getElementById("imgUrl").value = p.img;
     editIndex = index;
     document.getElementById("submitBtn").innerText = "Update Product";
   };
