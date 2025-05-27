@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login - ShopFromInsta</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #f4f4f9, #e0f7fa);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      flex-direction: column;
+    }
+
+    .wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+      width: 100%;
+      max-width: 900px;
+      padding: 20px;
+    }
+
+    @media (min-width: 768px) {
+      .wrapper {
+        flex-direction: row;
+        justify-content: center;
+        align-items: stretch;
+      }
+    }
+
+    .box {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      flex: 1;
+      animation: fadeInUp 0.8s ease both;
+      transition: transform 0.3s ease;
+    }
+
+    .box:hover {
+      transform: translateY(-4px);
+    }
+
+    @keyframes fadeInUp {
+      0% {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #222;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+
+    button {
+      background: #25D366;
+      color: white;
+      font-weight: bold;
+      border: none;
+      transition: background 0.3s;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1DA851;
+    }
+
+    #status {
+      padding: 12px;
+      margin: 15px 0;
+      border-radius: 6px;
+      font-size: 14px;
+      text-align: center;
+      display: none;
+    }
+
+    #status.success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    #status.error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .note {
+      font-size: 13px;
+      color: #777;
+      text-align: center;
+      margin-bottom: 15px;
+    }
+
+    .recaptcha-box {
+      margin-top: 10px;
+    }
+
+    .box-title {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <!-- Customer Box -->
+    <div class="box" style="animation-delay: 0.1s">
+      <div class="box-title">🛍 Customer Access</div>
+      <div class="note">No login required. Just enter your name and explore!</div>
+      <input type="text" id="customerName" placeholder="Enter your name" />
+      <button onclick="enterStore()">Enter Store</button>
+    </div>
+
+    <!-- Seller Box -->
+    <div class="box" style="animation-delay: 0.2s">
+      <div class="box-title">🔐 Seller Login / Register</div>
+      <input type="email" id="email" placeholder="Enter your email" required />
+      <input type="password" id="password" placeholder="Password (min 6 chars)" required />
+      <div id="recaptcha-container" class="recaptcha-box"></div>
+      <button onclick="login()">Login</button>
+      <button onclick="register()">Register</button>
+      <div id="status"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-analytics.js";
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
+      sendEmailVerification,
+      RecaptchaVerifier
+    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBTxOdGnWP_m50uoMr3XySd91YS7hYYFus",
+      authDomain: "shopfrominsta.firebaseapp.com",
+      projectId: "shopfrominsta",
+      storageBucket: "shopfrominsta.appspot.com",
+      messagingSenderId: "388292401194",
+      appId: "1:388292401194:web:d6daeba0f5ce1b86928b53",
+      measurementId: "G-BZ0J347WHE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const auth = getAuth(app);
+
+    const statusBox = document.getElementById("status");
+
+    function showStatus(message, type = "success") {
+      statusBox.textContent = message;
+      statusBox.className = type === "error" ? "error" : "success";
+      statusBox.style.display = "block";
+    }
+
+    const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      size: 'normal',
+      callback: () => console.log("reCAPTCHA passed"),
+      'expired-callback': () => {
+        showStatus("⚠️ reCAPTCHA expired. Please try again.", "error");
+      }
+    });
+    recaptchaVerifier.render();
+
+    window.login = async function () {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      if (!email || !password) {
+        showStatus("⚠️ Please fill in both fields.", "error");
+        return;
+      }
+      try {
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        await result.user.reload();
+        if (!result.user.emailVerified) {
+          showStatus("⚠️ Please verify your email. Check your inbox.", "error");
+          return;
+        }
+        showStatus("✅ Login successful! Redirecting...", "success");
+        setTimeout(() => {
+          window.location.href = "seller.html";
+        }, 1000);
+      } catch (e) {
+        showStatus("❌ Login failed: " + e.message, "error");
+      }
+    };
+
+    window.register = async function () {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      if (!email || password.length < 6) {
+        showStatus("⚠️ Enter a valid email and password with 6+ characters.", "error");
+        return;
+      }
+      try {
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        await sendEmailVerification(userCred.user);
+        showStatus("✅ Registered! Please verify your email before logging in.", "success");
+      } catch (e) {
+        showStatus("❌ Registration failed: " + e.message, "error");
+      }
+    };
+
+    window.enterStore = function () {
+      const name = document.getElementById("customerName").value.trim();
+      if (!name) {
+        alert("Please enter your name to continue.");
+        return;
+      }
+      localStorage.setItem("customerName", name);
+      window.location.href = "store.html";
+    };
+  </script>
+</body>
+</html>
